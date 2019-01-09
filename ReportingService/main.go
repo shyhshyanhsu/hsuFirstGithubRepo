@@ -27,7 +27,7 @@ func main() {
 
 	posHandler := httptransport.NewServer(
 		makePOSEndpoint(svc),
-		decodeBusinessesRequest,
+		decodeBusinessIDStartDateDaysAfterStartRequest,
 		encodeResponse,
 	)
 

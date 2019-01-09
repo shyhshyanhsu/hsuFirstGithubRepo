@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
@@ -86,11 +85,12 @@ func makePOSProxy(ctx context.Context, instance string) endpoint.Endpoint {
 		u.Path = "/businesses"
 	}
 	return httptransport.NewClient(
-		"GET",
+		"POST",
 		u,
 		encodeRequest,
 		decodeBusinessesResponse,
 	).Endpoint()
+	//TODO: use GET to pass limit (default=500) and offset (default=0) as query parameters
 }
 
 func encodeRequest(_ context.Context, r *http.Request, request interface{}) error {
@@ -103,7 +103,8 @@ func encodeRequest(_ context.Context, r *http.Request, request interface{}) erro
 }
 
 func decodeBusinessesResponse(_ context.Context, r *http.Response) (interface{}, error) {
-	var response businessesResponse
+	//var response businessesResponse
+	var response Business
 	if err := json.NewDecoder(r.Body).Decode(&response); err != nil {
 		return nil, err
 	}
@@ -117,18 +118,16 @@ type proxymw struct {
 	pos endpoint.Endpoint // client proxy
 }
 
-
-func (mw proxymw) reporting(s string) (string, error) {
-	response, err := mw.pos(mw.ctx, businessesRequest{S: s})
+func (mw proxymw) reporting(req BusinessesRequest) (Business, error) {
+	response, err := mw.pos(mw.ctx, req)
 	if err != nil {
-		return "", err
+		fmt.Println("err in  (mw proxymw) reporting = ", err.Error())
+		return Business{}, err
 	}
 
-	resp := response.(businessesResponse)
-	if resp.Err != "" {
-		return resp.V, errors.New(resp.Err)
-	}
-	return resp.V, nil
+	var resp Business
+	resp = response.(Business)
+	return resp, nil
 }
 
 
